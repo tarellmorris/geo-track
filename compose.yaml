@@ -1,0 +1,58 @@
+services:
+#  frontend:
+#    container_name: 'react'
+#    build: src/client
+#    depends_on:
+#      - backend
+#    networks:
+#      - geo-net
+#    ports:
+#      - "3000:3000"
+#
+#  backend:
+#    container_name: 'django'
+#    build: src/server
+#    networks:
+#      - geo-net
+#    ports:
+#      - "8080:8080"
+#    depends_on:
+#      - database
+
+  database:
+    container_name: 'postGIS'
+    platform: linux/x86_64
+    image: postgis/postgis:14-3.5
+    restart: always
+    networks:
+      - geo-net
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/10-initdb-postgis.sh:/docker-entrypoint-initdb.d/10-initdb-postgis.sh:ro
+      - ./scripts/20-load-dem.sh:/docker-entrypoint-initdb.d/20-load-dem.sh:ro
+      - ./dem:/dem:ro
+
+#  nginx:
+#    image: nginx:alpine
+#    container_name: 'nginx'
+#    restart: unless-stopped
+#    networks:
+#      - geo-net
+#    volumes:
+#      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+#    ports:
+#      - "80:80"
+#    depends_on:
+#      - frontend
+#      - backend
+
+volumes:
+  pgdata: { }
+
+networks:
+  geo-net:
+    driver: bridge
