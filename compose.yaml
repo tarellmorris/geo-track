@@ -22,7 +22,8 @@ services:
   database:
     container_name: 'postGIS'
     platform: linux/x86_64
-    image: postgis/postgis:14-3.5
+    build: .
+    image: geo-track-postgis:14-3.5
     restart: always
     networks:
       - geo-net
@@ -32,7 +33,6 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./scripts/10-initdb-postgis.sh:/docker-entrypoint-initdb.d/10-initdb-postgis.sh:ro
       - ./scripts/20-load-dem.sh:/docker-entrypoint-initdb.d/20-load-dem.sh:ro
       - ./dem:/dem:ro
 

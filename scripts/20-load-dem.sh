@@ -5,8 +5,8 @@ set -Eeuo pipefail
 export PGUSER="${POSTGRES_USER}"
 
 DEM_DIR="${DEM_DIR:-/dem}"
-DEM_TABLE="${DEM_TABLE:-public.dem_rasters}"
-DEM_TILE_SIZE="${DEM_TILE_SIZE:-256x256}"
+DEM_TABLE="${DEM_TABLE:-public.elevation}"
+DEM_TILE_SIZE="${DEM_TILE_SIZE:-100x100}"
 DEM_SRID="${DEM_SRID:-4269}"
 
 if ! command -v raster2pgsql >/dev/null 2>&1; then
