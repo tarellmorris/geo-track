@@ -4,7 +4,7 @@ GeoTrack is a self-hosted trip recorder and geospatial dashboard. It records
 browser GPS positions, stores them in PostGIS, renders routes with Leaflet, and
 derives distance, speed, and DEM-backed elevation metrics.
 
-![GeoTrack desktop dashboard](docs/images/dashboard-desktop.jpg)
+![GeoTrack desktop dashboard](docs/images/dashboard-desktop.png)
 
 ## Features
 
@@ -163,7 +163,7 @@ Geolocation generally requires `localhost` or HTTPS. Production deployments
 should serve the client over HTTPS.
 
 <p align="center">
-  <img src="docs/images/dashboard-mobile.jpg" alt="GeoTrack mobile dashboard" width="390">
+  <img src="docs/images/dashboard-mobile.png" alt="GeoTrack mobile dashboard" width="390">
 </p>
 
 ## Metrics
