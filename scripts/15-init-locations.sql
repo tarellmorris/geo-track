@@ -27,18 +27,20 @@ DECLARE
 	_default_trip_id uuid;
 	_max_move float;
 	_start_loc geometry;
+	_trip_started_at timestamp;
 BEGIN
 	_max_move := 1 / 110.0; -- about 1km
 	_start_loc := ST_SetSRID(ST_MakePoint(-71.5550657, 42.0642992), 4326);
+	_trip_started_at := CURRENT_TIMESTAMP;
 
 	DELETE FROM trips WHERE name = 'Simulated Trip';
 
-	INSERT INTO trips (name)
-		VALUES ('Simulated Trip')
+	INSERT INTO trips (name, started_at)
+		VALUES ('Simulated Trip', _trip_started_at)
 		RETURNING id INTO _default_trip_id;
 
-	INSERT INTO locations (trip_id, point)
-		SELECT _default_trip_id, _start_loc;
+	INSERT INTO locations (trip_id, point, time)
+		VALUES (_default_trip_id, _start_loc, _trip_started_at);
 
 	FOR counter IN 1..45 LOOP
 		INSERT INTO locations (trip_id, point, time)
@@ -73,3 +75,25 @@ BEGIN
 		) existing;
 END;
 $$;
+
+DROP VIEW IF EXISTS trip_routes;
+
+CREATE VIEW trip_routes AS
+WITH routes AS (
+	SELECT
+		t.id,
+		t.name,
+		t.started_at,
+		MIN(l.time) AS first_location_at,
+		MAX(l.time) AS last_location_at,
+		COUNT(l.id) AS location_count,
+		ST_MakeLine(l.point ORDER BY l.time)::geometry(LineString, 4326) AS route
+	FROM trips t
+	JOIN locations l ON l.trip_id = t.id
+	GROUP BY t.id, t.name, t.started_at
+	HAVING COUNT(l.id) >= 2
+)
+SELECT
+	ROW_NUMBER() OVER (ORDER BY id)::integer AS qgis_id,
+	routes.*
+FROM routes;
