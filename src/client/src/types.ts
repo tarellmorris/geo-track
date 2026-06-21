@@ -14,6 +14,8 @@ export interface Trip {
   id: string;
   name: string;
   started_at: string;
+  ended_at: string | null;
+  status: "active" | "completed";
   created_at: string;
   location_count: number;
   first_location_at: string | null;
@@ -23,12 +25,13 @@ export interface Trip {
 export interface Location {
   id: string;
   time: string;
+  accuracy_m: number | null;
   point: PointGeometry;
 }
 
 export interface RouteFeature {
   type: "Feature";
-  geometry: LineStringGeometry;
+  geometry: LineStringGeometry | null;
   properties: {
     tripId: string;
   };
@@ -53,7 +56,7 @@ export interface ElevationSummary {
 
 export interface TripData {
   locations: Location[];
-  route: RouteFeature;
+  route: RouteFeature | null;
   metrics: Metrics;
   elevationPoints: ElevationPoint[];
   elevationSummary: ElevationSummary;

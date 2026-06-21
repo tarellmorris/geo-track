@@ -20,7 +20,7 @@ function FitRoute({ route }: { route: RouteFeature | null }) {
   const map = useMap();
 
   useEffect(() => {
-    if (!route?.geometry.coordinates.length) {
+    if (!route?.geometry?.coordinates.length) {
       return;
     }
 
@@ -45,7 +45,7 @@ function formatTime(value: string) {
 
 export function TripMap({ locations, route }: TripMapProps) {
   const routePositions =
-    route?.geometry.coordinates.map(([longitude, latitude]) => [
+    route?.geometry?.coordinates.map(([longitude, latitude]) => [
       latitude,
       longitude,
     ] as [number, number]) ?? [];

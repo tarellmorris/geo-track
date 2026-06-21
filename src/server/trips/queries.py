@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.db import connection
+from django.db import IntegrityError, connection, transaction
 
 from .db import dict_fetch_all, elevation_table_name
 
@@ -12,13 +12,15 @@ def list_trips():
                 t.id,
                 t.name,
                 t.started_at,
+                t.ended_at,
+                t.status,
                 t.created_at,
                 count(l.id) AS location_count,
                 min(l.time) AS first_location_at,
                 max(l.time) AS last_location_at
             FROM trips t
             LEFT JOIN locations l ON l.trip_id = t.id
-            GROUP BY t.id, t.name, t.started_at, t.created_at
+            GROUP BY t.id, t.name, t.started_at, t.ended_at, t.status, t.created_at
             ORDER BY t.created_at DESC;
             """
         )
@@ -33,6 +35,8 @@ def get_trip(trip_id):
                 t.id,
                 t.name,
                 t.started_at,
+                t.ended_at,
+                t.status,
                 t.created_at,
                 count(l.id) AS location_count,
                 min(l.time) AS first_location_at,
@@ -40,7 +44,7 @@ def get_trip(trip_id):
             FROM trips t
             LEFT JOIN locations l ON l.trip_id = t.id
             WHERE t.id = %s
-            GROUP BY t.id, t.name, t.started_at, t.created_at;
+            GROUP BY t.id, t.name, t.started_at, t.ended_at, t.status, t.created_at;
             """,
             [trip_id],
         )
@@ -55,6 +59,7 @@ def list_locations(trip_id):
             SELECT
                 id,
                 time,
+                accuracy_m,
                 ST_AsGeoJSON(point)::json AS point
             FROM locations
             WHERE trip_id = %s
@@ -65,11 +70,81 @@ def list_locations(trip_id):
         return dict_fetch_all(cursor)
 
 
+def create_trip(name, started_at):
+    try:
+        with transaction.atomic(), connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO trips (name, started_at, status)
+                VALUES (%s, COALESCE(%s, CURRENT_TIMESTAMP), 'active')
+                RETURNING id;
+                """,
+                [name, started_at],
+            )
+            trip_id = cursor.fetchone()[0]
+    except IntegrityError:
+        return None
+
+    return get_trip(trip_id)
+
+
+def add_location(trip_id, longitude, latitude, recorded_at, accuracy_m):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO locations (trip_id, point, time, accuracy_m)
+            SELECT
+                id,
+                ST_SetSRID(ST_MakePoint(%s, %s), 4326),
+                COALESCE(%s, CURRENT_TIMESTAMP),
+                %s
+            FROM trips
+            WHERE id = %s
+                AND status = 'active'
+            RETURNING
+                id,
+                time,
+                accuracy_m,
+                ST_AsGeoJSON(point)::json AS point;
+            """,
+            [longitude, latitude, recorded_at, accuracy_m, trip_id],
+        )
+        rows = dict_fetch_all(cursor)
+        return rows[0] if rows else None
+
+
+def complete_trip(trip_id, ended_at):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE trips
+            SET
+                status = 'completed',
+                ended_at = COALESCE(%s, (
+                    SELECT MAX(time)
+                    FROM locations
+                    WHERE trip_id = trips.id
+                ), CURRENT_TIMESTAMP)
+            WHERE id = %s
+                AND status = 'active'
+            RETURNING id;
+            """,
+            [ended_at, trip_id],
+        )
+        row = cursor.fetchone()
+
+    return get_trip(row[0]) if row else get_trip(trip_id)
+
+
 def get_route(trip_id):
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT ST_AsGeoJSON(ST_MakeLine(point ORDER BY time))::json AS route
+            SELECT CASE
+                WHEN COUNT(*) >= 2
+                THEN ST_AsGeoJSON(ST_MakeLine(point ORDER BY time))::json
+                ELSE NULL
+            END AS route
             FROM locations
             WHERE trip_id = %s;
             """,

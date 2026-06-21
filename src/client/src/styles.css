@@ -28,6 +28,15 @@ select {
   font: inherit;
 }
 
+.brand-primary {
+  color: #fff !important;
+  background: #176f5b !important;
+}
+
+.brand-primary:hover {
+  background: #0f5e4c !important;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
@@ -92,12 +101,23 @@ select {
 
 .trip-picker label {
   display: block;
-  margin-bottom: 7px;
   color: #69756f;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.picker-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.picker-heading button {
+  flex: 0 0 auto;
 }
 
 .select-wrap {
@@ -147,10 +167,121 @@ select {
   box-shadow: 0 0 0 3px rgb(35 133 107 / 15%);
 }
 
+.active-trip-link {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 9px 0 0;
+  padding: 0;
+  border: 0;
+  color: #176f5b;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.active-trip-link:hover {
+  color: #0c5544;
+}
+
+.recording-error {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 24px;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e4c8c0;
+  color: #813a2c;
+  background: #fff1ed;
+  font-size: 11px;
+}
+
+.recording-error button {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.recording-error button:hover {
+  background: rgb(129 58 44 / 8%);
+}
+
 .panel-content {
   min-height: 0;
   flex: 1;
   overflow-y: auto;
+}
+
+.recording-controls {
+  margin: 0 18px 16px;
+  padding: 12px;
+  border: 1px solid #c9ddd3;
+  border-radius: 7px;
+  background: #f0f7f3;
+}
+
+.recording-status {
+  display: grid;
+  grid-template-columns: 11px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+}
+
+.recording-pulse {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #83918a;
+}
+
+.recording-pulse.is-recording,
+.status-dot.is-recording {
+  background: #d4543a;
+  box-shadow: 0 0 0 4px rgb(212 84 58 / 13%);
+  animation: recording-pulse 1.8s ease-out infinite;
+}
+
+.recording-status strong,
+.recording-status span {
+  display: block;
+}
+
+.recording-status strong {
+  color: #20302a;
+  font-size: 12px;
+}
+
+.recording-status span {
+  margin-top: 2px;
+  color: #6b7973;
+  font-size: 10px;
+}
+
+.recording-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 11px;
+}
+
+@keyframes recording-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(212 84 58 / 30%);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgb(212 84 58 / 0%);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(212 84 58 / 0%);
+  }
 }
 
 .trip-summary {
@@ -485,6 +616,83 @@ select {
   background: #dc7358;
 }
 
+.modal-backdrop {
+  position: fixed;
+  z-index: 2000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(18 31 27 / 45%);
+  backdrop-filter: blur(3px);
+}
+
+.create-trip-dialog {
+  width: min(100%, 400px);
+  border: 1px solid #d7dfd9;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 22px 65px rgb(16 34 28 / 24%);
+}
+
+.dialog-heading {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid #e3e8e3;
+}
+
+.dialog-heading h2 {
+  margin: 0;
+  color: #172720;
+  font-size: 19px;
+  letter-spacing: 0;
+}
+
+.create-trip-dialog form {
+  padding: 17px 18px 18px;
+}
+
+.create-trip-dialog form > label {
+  display: block;
+  margin-bottom: 7px;
+  color: #52605a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.create-trip-dialog input {
+  width: 100%;
+  height: 42px;
+  padding: 0 11px;
+  border: 1px solid #cbd5ce;
+  border-radius: 7px;
+  outline: none;
+  color: #20302a;
+  background: #fff;
+  font-size: 14px;
+}
+
+.create-trip-dialog input:focus {
+  border-color: #23856b;
+  box-shadow: 0 0 0 3px rgb(35 133 107 / 14%);
+}
+
+.create-trip-dialog form > p {
+  margin: 9px 0 0;
+  color: #74817b;
+  font-size: 11px;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
 @media (max-width: 760px) {
   .app-shell {
     grid-template-rows: minmax(330px, 52%) minmax(300px, 48%);
@@ -523,6 +731,10 @@ select {
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding: 0 14px 15px;
+  }
+
+  .recording-controls {
+    margin: 0 14px 13px;
   }
 
   .metric {

@@ -5,6 +5,9 @@ CREATE TABLE IF NOT EXISTS trips (
 	id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	name text NOT NULL,
 	started_at timestamp DEFAULT CURRENT_TIMESTAMP,
+	ended_at timestamp,
+	status text NOT NULL DEFAULT 'active'
+		CHECK (status IN ('active', 'completed')),
 	created_at timestamp DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -12,6 +15,7 @@ CREATE TABLE IF NOT EXISTS locations (
 	id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	trip_id uuid NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
 	point geometry(Point, 4326) NOT NULL,
+	accuracy_m double precision,
 	time timestamp DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -21,6 +25,10 @@ CREATE INDEX IF NOT EXISTS locations_trip_time_idx
 CREATE INDEX IF NOT EXISTS locations_point_idx
 	ON locations
 	USING GIST (point);
+
+CREATE UNIQUE INDEX IF NOT EXISTS trips_single_active_idx
+	ON trips (status)
+	WHERE status = 'active';
 
 DO $$
 DECLARE
@@ -35,8 +43,8 @@ BEGIN
 
 	DELETE FROM trips WHERE name = 'Simulated Trip';
 
-	INSERT INTO trips (name, started_at)
-		VALUES ('Simulated Trip', _trip_started_at)
+	INSERT INTO trips (name, started_at, status)
+		VALUES ('Simulated Trip', _trip_started_at, 'completed')
 		RETURNING id INTO _default_trip_id;
 
 	INSERT INTO locations (trip_id, point, time)
@@ -73,6 +81,14 @@ BEGIN
 			ORDER BY time DESC
 			LIMIT 1
 		) existing;
+
+	UPDATE trips
+	SET ended_at = (
+		SELECT MAX(time)
+		FROM locations
+		WHERE trip_id = _default_trip_id
+	)
+	WHERE id = _default_trip_id;
 END;
 $$;
 
@@ -84,13 +100,15 @@ WITH routes AS (
 		t.id,
 		t.name,
 		t.started_at,
+		t.ended_at,
+		t.status,
 		MIN(l.time) AS first_location_at,
 		MAX(l.time) AS last_location_at,
 		COUNT(l.id) AS location_count,
 		ST_MakeLine(l.point ORDER BY l.time)::geometry(LineString, 4326) AS route
 	FROM trips t
 	JOIN locations l ON l.trip_id = t.id
-	GROUP BY t.id, t.name, t.started_at
+	GROUP BY t.id, t.name, t.started_at, t.ended_at, t.status
 	HAVING COUNT(l.id) >= 2
 )
 SELECT
