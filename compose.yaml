@@ -9,15 +9,21 @@ services:
 #    ports:
 #      - "3000:3000"
 #
-#  backend:
-#    container_name: 'django'
-#    build: src/server
-#    networks:
-#      - geo-net
-#    ports:
-#      - "8080:8080"
-#    depends_on:
-#      - database
+  backend:
+    container_name: 'django'
+    build: src/server
+    networks:
+      - geo-net
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: database
+      POSTGRES_PORT: "5432"
+    ports:
+      - "8080:8080"
+    depends_on:
+      database:
+        condition: service_healthy
 
   database:
     container_name: 'postGIS'
@@ -31,6 +37,11 @@ services:
       - .env
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./scripts/15-init-locations.sql:/docker-entrypoint-initdb.d/15-init-locations.sql:ro
