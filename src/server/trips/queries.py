@@ -200,21 +200,31 @@ def get_elevation_profile(trip_id):
             f"""
             WITH transformed_locations AS (
                 SELECT
+                    id,
                     time,
                     point,
                     ST_Transform(point, %s) AS raster_point
                 FROM locations
                 WHERE trip_id = %s
+            ), sampled_points AS (
+                SELECT DISTINCT ON (l.id)
+                    l.id,
+                    l.time,
+                    l.point,
+                    ST_Value(e.rast, l.raster_point) AS elevation
+                FROM transformed_locations l
+                JOIN {table} e
+                    ON ST_ConvexHull(e.rast) && l.raster_point
+                    AND ST_Intersects(e.rast, l.raster_point)
+                WHERE ST_Value(e.rast, l.raster_point) IS NOT NULL
+                ORDER BY l.id
             )
             SELECT
-                l.time,
-                ST_AsGeoJSON(l.point)::json AS location,
-                ST_Value(e.rast, l.raster_point) AS elevation
-            FROM transformed_locations l
-            JOIN {table} e
-                ON ST_ConvexHull(e.rast) && l.raster_point
-                AND ST_Intersects(e.rast, l.raster_point)
-            ORDER BY l.time;
+                time,
+                ST_AsGeoJSON(point)::json AS location,
+                elevation
+            FROM sampled_points
+            ORDER BY time;
             """,
             [settings.DEM_SRID, trip_id],
         )
@@ -229,29 +239,58 @@ def get_elevation_summary(trip_id):
             f"""
             WITH transformed_locations AS (
                 SELECT
+                    id,
                     time,
                     ST_Transform(point, %s) AS raster_point
                 FROM locations
                 WHERE trip_id = %s
             ), data_points AS (
-                SELECT
+                SELECT DISTINCT ON (l.id)
+                    l.id,
                     l.time,
                     ST_Value(e.rast, l.raster_point) AS elevation
                 FROM transformed_locations l
                 JOIN {table} e
                     ON ST_ConvexHull(e.rast) && l.raster_point
                     AND ST_Intersects(e.rast, l.raster_point)
+                WHERE ST_Value(e.rast, l.raster_point) IS NOT NULL
+                ORDER BY l.id
             ), deltas AS (
                 SELECT
                     elevation,
                     LEAD(elevation) OVER (ORDER BY time) - elevation AS delta
                 FROM data_points
+            ), summary AS (
+                SELECT
+                    COUNT(*) AS elevation_sample_count,
+                    COALESCE(SUM(delta) FILTER (WHERE delta > 0), 0) AS total_ascent,
+                    COALESCE(ABS(SUM(delta) FILTER (WHERE delta < 0)), 0) AS total_descent
+                FROM deltas
             )
             SELECT
-                COALESCE(SUM(delta) FILTER (WHERE delta > 0), 0) AS total_ascent,
-                COALESCE(ABS(SUM(delta) FILTER (WHERE delta < 0)), 0) AS total_descent
-            FROM deltas
-            WHERE delta IS NOT NULL;
+                CASE
+                    WHEN summary.elevation_sample_count >= 2
+                    THEN summary.total_ascent
+                    ELSE NULL
+                END AS total_ascent,
+                CASE
+                    WHEN summary.elevation_sample_count >= 2
+                    THEN summary.total_descent
+                    ELSE NULL
+                END AS total_descent,
+                summary.elevation_sample_count,
+                location_totals.location_count AS total_location_count,
+                CASE
+                    WHEN location_totals.location_count = 0 THEN 'pending'
+                    WHEN summary.elevation_sample_count = 0 THEN 'unavailable'
+                    WHEN summary.elevation_sample_count < location_totals.location_count THEN 'partial'
+                    ELSE 'available'
+                END AS coverage
+            FROM summary
+            CROSS JOIN (
+                SELECT COUNT(*) AS location_count
+                FROM transformed_locations
+            ) location_totals;
             """,
             [settings.DEM_SRID, trip_id],
         )

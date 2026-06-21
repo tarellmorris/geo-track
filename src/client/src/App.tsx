@@ -75,6 +75,20 @@ function buildRoute(tripId: string, locations: Location[]): RouteFeature | null 
   };
 }
 
+function elevationEmptyMessage(coverage: TripData["elevationSummary"]["coverage"]) {
+  if (coverage === "pending") {
+    return "Waiting for location samples";
+  }
+  if (coverage === "unavailable") {
+    return "Elevation unavailable outside DEM coverage";
+  }
+  return "Not enough covered samples";
+}
+
+function formatElevationTotal(value: number | null) {
+  return value === null ? "—" : `${Math.round(value)} m`;
+}
+
 function Metric({
   icon,
   label,
@@ -505,19 +519,42 @@ export default function App() {
                   <span className="eyebrow">Terrain</span>
                   <h3>Elevation profile</h3>
                 </div>
-                <span>{tripData.elevationPoints.length} samples</span>
+                <span>
+                  {tripData.elevationSummary.elevation_sample_count} of{" "}
+                  {tripData.elevationSummary.total_location_count} samples
+                </span>
               </div>
-              <ElevationChart points={tripData.elevationPoints} />
+              {tripData.elevationSummary.coverage !== "available" && (
+                <div
+                  className={`coverage-notice coverage-${tripData.elevationSummary.coverage}`}
+                >
+                  {tripData.elevationSummary.coverage === "partial"
+                    ? "Partial DEM coverage"
+                    : tripData.elevationSummary.coverage === "unavailable"
+                      ? "Elevation unavailable"
+                      : "Awaiting elevation data"}
+                </div>
+              )}
+              <ElevationChart
+                points={tripData.elevationPoints}
+                emptyMessage={elevationEmptyMessage(
+                  tripData.elevationSummary.coverage,
+                )}
+              />
               <div className="elevation-totals">
                 <div>
                   <ArrowUpRight size={17} />
                   <span>Ascent</span>
-                  <strong>{Math.round(tripData.elevationSummary.total_ascent)} m</strong>
+                  <strong>
+                    {formatElevationTotal(tripData.elevationSummary.total_ascent)}
+                  </strong>
                 </div>
                 <div>
                   <ArrowDownRight size={17} />
                   <span>Descent</span>
-                  <strong>{Math.round(tripData.elevationSummary.total_descent)} m</strong>
+                  <strong>
+                    {formatElevationTotal(tripData.elevationSummary.total_descent)}
+                  </strong>
                 </div>
               </div>
             </section>

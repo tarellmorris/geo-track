@@ -2,15 +2,19 @@ import type { ElevationPoint } from "../types";
 
 interface ElevationChartProps {
   points: ElevationPoint[];
+  emptyMessage?: string;
 }
 
-export function ElevationChart({ points }: ElevationChartProps) {
+export function ElevationChart({
+  points,
+  emptyMessage = "No elevation samples",
+}: ElevationChartProps) {
   const elevations = points
     .map((point) => point.elevation)
     .filter((elevation): elevation is number => elevation !== null);
 
   if (elevations.length < 2) {
-    return <div className="chart-empty">No elevation samples</div>;
+    return <div className="chart-empty">{emptyMessage}</div>;
   }
 
   const width = 320;

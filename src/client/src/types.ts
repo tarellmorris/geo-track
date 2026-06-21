@@ -50,8 +50,11 @@ export interface ElevationPoint {
 }
 
 export interface ElevationSummary {
-  total_ascent: number;
-  total_descent: number;
+  total_ascent: number | null;
+  total_descent: number | null;
+  elevation_sample_count: number;
+  total_location_count: number;
+  coverage: "pending" | "unavailable" | "partial" | "available";
 }
 
 export interface TripData {
