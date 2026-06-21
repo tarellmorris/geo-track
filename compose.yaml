@@ -1,14 +1,16 @@
 services:
-#  frontend:
-#    container_name: 'react'
-#    build: src/client
-#    depends_on:
-#      - backend
-#    networks:
-#      - geo-net
-#    ports:
-#      - "3000:3000"
-#
+  frontend:
+    container_name: 'react'
+    build: src/client
+    networks:
+      - geo-net
+    environment:
+      API_PROXY_TARGET: http://backend:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
   backend:
     container_name: 'django'
     build: src/server
@@ -19,6 +21,7 @@ services:
     environment:
       POSTGRES_HOST: database
       POSTGRES_PORT: "5432"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0,backend
     ports:
       - "8080:8080"
     depends_on:
